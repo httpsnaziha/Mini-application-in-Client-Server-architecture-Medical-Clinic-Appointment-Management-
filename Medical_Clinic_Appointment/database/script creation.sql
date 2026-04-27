@@ -22,7 +22,7 @@ CREATE TABLE Doctor (
     phone NUMBER
 );
 
--- 4. Create Appointment Table
+-- 4. Create Appointment Table 
 CREATE TABLE Appointment (
     appointment_id NUMBER PRIMARY KEY,
     app_date DATE,
