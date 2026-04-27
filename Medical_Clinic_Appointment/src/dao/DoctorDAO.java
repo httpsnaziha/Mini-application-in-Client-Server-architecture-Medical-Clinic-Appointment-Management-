@@ -8,16 +8,16 @@ public class DoctorDAO {
 
     // Ajouter un docteur
     public void addDoctor(Doctor d) {
-        String sql = "INSERT INTO Doctor (doctor_id, name, surname, specialty, phone) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO Doctor ( name, surname, specialty, phone) VALUES ( ?, ?, ?, ?)";
         
         try (Connection con = DBConnection.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
 
-            ps.setInt(1, d.getId());
-            ps.setString(2, d.getName());
-            ps.setString(3, d.getSurname());
-            ps.setString(4, d.getSpecialty());
-            ps.setLong(5, Long.parseLong(d.getPhone())); // phone est un NUMBER en SQL
+           
+            ps.setString(1, d.getName());
+            ps.setString(2, d.getSurname());
+            ps.setString(3, d.getSpecialty());
+            ps.setLong(4, Long.parseLong(d.getPhone())); // phone est un NUMBER en SQL
 
             ps.executeUpdate();
             System.out.println("Doctor added successfully!");

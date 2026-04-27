@@ -11,7 +11,8 @@ public class DBConnection {
 
     public static Connection getConnection() {
         try {
-            Class.forName("oracle.jdbc.driver.OracleDriver");
+            
+            Class.forName("oracle.jdbc.OracleDriver");
             return DriverManager.getConnection(URL, USER, PASSWORD);
         } catch (Exception e) {
             System.err.println("Erreur de connexion : " + e.getMessage());

@@ -1,5 +1,6 @@
 package model;
 import java.util.Date;
+import java.text.SimpleDateFormat;
 
 public class Patient {
     private int id;
@@ -14,7 +15,23 @@ public class Patient {
         this.birthDate = birthDate; this.phone = phone; this.address = address;
     }
 
-    public int getId() { return id; }
+    public Patient(String last, String first, String dob, String ph, String adr) {
+    	this.surname = last;
+        this.name = first;
+        this.phone = ph;
+        this.address = adr;
+        
+        // On transforme le texte "23/04/2005" en vraie Date Java
+        try {
+            this.birthDate = new SimpleDateFormat("dd/MM/yyyy").parse(dob);
+        } catch (Exception e) {
+            System.err.println("Format date invalide : " + dob);
+            this.birthDate = null; 
+        }
+    }
+	
+
+	public int getId() { return id; }
     public String getName() { return name; }
     public String getSurname() { return surname; }
     public Date getBirthDate() { return birthDate; }
