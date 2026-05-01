@@ -4,6 +4,10 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -15,6 +19,8 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
+
+import util.DBConnection;
 
 public class DoctorFrame extends JFrame implements ActionListener {
 
@@ -28,7 +34,7 @@ public class DoctorFrame extends JFrame implements ActionListener {
     Color tableHead = new Color(240, 244, 243);
     Color dangerRed = new Color(162, 45, 45);
     Color dangerBg  = new Color(252, 235, 235);
-    
+
     private int answer;
 
     //buttons
@@ -52,8 +58,19 @@ public class DoctorFrame extends JFrame implements ActionListener {
         "Ophthalmologist", "Orthopedist", "Psychiatrist", "Radiologist"
     };
 
-    public DoctorFrame() {
+    //objet of database connection
+    private Connection connect;
+    private Statement state;
 
+    // save original values to use in edit WHERE clause
+    private String originalLastName;
+    private String originalFirstName;
+
+    public DoctorFrame() {
+        //connect to the data base
+        connect = DBConnection.getConnection();
+
+        //=====================================================================
         this.setTitle("Doctors");
         this.setSize(1100, 510);
         this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -64,14 +81,14 @@ public class DoctorFrame extends JFrame implements ActionListener {
         panel.setBackground(mintColor);
         this.setContentPane(panel);
 
-        // header
+        // header =========================================================
         JLabel label = new JLabel("Doctors Management");
         label.setFont(new Font("SansSerif", Font.BOLD, 28));
         label.setForeground(tealGreen);
         label.setBounds(20, 10, 500, 40);
         panel.add(label);
 
-        // left white card
+        // left white card ================================================
         JPanel info = new JPanel(null);
         info.setBackground(white);
         info.setBounds(15, 60, 450, 390);
@@ -83,18 +100,18 @@ public class DoctorFrame extends JFrame implements ActionListener {
         title.setBounds(15, 12, 200, 16);
         info.add(title);
 
-        // last name
+        // last name ================================================================
         JLabel last_name = new JLabel("Last name");
         last_name.setFont(new Font("SansSerif", Font.PLAIN, 13));
         last_name.setForeground(labelGray);
         last_name.setBounds(15, 38, 200, 16);
-        info.add(title);
+        info.add(last_name);
         lastNameField = new JTextField();
         lastNameField.setFont(new Font("SansSerif", Font.PLAIN, 13));
         lastNameField.setBounds(15, 55, 410, 30);
         info.add(lastNameField);
 
-        // first name
+        // first name =====================================================
         JLabel first_Name = new JLabel("First name");
         first_Name.setFont(new Font("SansSerif", Font.PLAIN, 13));
         first_Name.setForeground(labelGray);
@@ -105,7 +122,7 @@ public class DoctorFrame extends JFrame implements ActionListener {
         firstNameField.setBounds(15, 115, 410, 30);
         info.add(firstNameField);
 
-        // speciality
+        // speciality ==========================================================
         JLabel spec = new JLabel("Speciality");
         spec.setFont(new Font("SansSerif", Font.PLAIN, 13));
         spec.setForeground(labelGray);
@@ -118,10 +135,10 @@ public class DoctorFrame extends JFrame implements ActionListener {
         specialtyCombo.setFocusable(false);
         info.add(specialtyCombo);
 
-        // phone
-        JLabel phone = new JLabel("Phone \u2116");
+        // phone =================================================================
+        JLabel phone = new JLabel("Phone");
         phone.setFont(new Font("SansSerif", Font.PLAIN, 13));
-
+        phone.setForeground(labelGray);
         phone.setBounds(15, 218, 200, 16);
         info.add(phone);
         phoneField = new JTextField();
@@ -129,7 +146,7 @@ public class DoctorFrame extends JFrame implements ActionListener {
         phoneField.setBounds(15, 235, 410, 30);
         info.add(phoneField);
 
-        // buttons
+        // buttons =====================================================================
         add_doctor = new JButton("Add");
         add_doctor.setBounds(15, 300, 190, 34);
         add_doctor.setBackground(tealGreen);
@@ -157,7 +174,7 @@ public class DoctorFrame extends JFrame implements ActionListener {
         delete_doctor.addActionListener(this);
         info.add(delete_doctor);
 
-        // right table card
+        //table ====================================================================
         JPanel tableCard = new JPanel(null);
         tableCard.setBackground(white);
         tableCard.setBounds(480, 60, 600, 390);
@@ -181,7 +198,7 @@ public class DoctorFrame extends JFrame implements ActionListener {
         doctorTable.setSelectionBackground(mintColor);
         doctorTable.setSelectionForeground(new Color(0, 80, 70));
         doctorTable.setShowVerticalLines(false);
-        doctorTable.setFocusable(false);
+        doctorTable.setFocusable(true);
         doctorTable.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12));
         doctorTable.getTableHeader().setBackground(tableHead);
         doctorTable.getTableHeader().setForeground(labelGray);
@@ -195,47 +212,131 @@ public class DoctorFrame extends JFrame implements ActionListener {
             public void mouseClicked(java.awt.event.MouseEvent e) {
                 int row = doctorTable.getSelectedRow();
                 if (row >= 0) {
-                    lastNameField.setText((String) tableModel.getValueAt(row, 0));
-                    firstNameField.setText((String) tableModel.getValueAt(row, 1));
+                    //Save original values to use in edit WHERE clause
+                    originalLastName  = (String) tableModel.getValueAt(row, 0);
+                    originalFirstName = (String) tableModel.getValueAt(row, 1);
+
+                    lastNameField.setText(originalLastName);
+                    firstNameField.setText(originalFirstName);
                     specialtyCombo.setSelectedItem(tableModel.getValueAt(row, 2));
                     phoneField.setText((String) tableModel.getValueAt(row, 3));
                 }
             }
         });
 
+        loadDoctors();
         this.setVisible(true);
+    }
+
+    // load doctors infos from the data base ==================================================================
+    private void loadDoctors() {
+        try {
+            tableModel.setRowCount(0); // clear table first
+            state = connect.createStatement();
+            // NAME = last name, SURNAME = first name (same convention as patient table)
+            ResultSet rs = state.executeQuery("SELECT NAME, SURNAME, SPECIALTY, PHONE FROM doctor");
+            while (rs.next()) {
+                String lastName   = rs.getString("NAME");
+                String firstName  = rs.getString("SURNAME");
+                String speciality = rs.getString("SPECIALTY");
+                String phone      = rs.getString("PHONE");
+                tableModel.addRow(new Object[]{lastName, firstName, speciality, phone});
+            }
+            rs.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Error loading doctors: " + e.getMessage());
+        }
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
 
+        //add doctor to the data base
         if (e.getSource() == add_doctor) {
-            String last  = lastNameField.getText().trim();
-            String first = firstNameField.getText().trim();
-            String spec  = (String) specialtyCombo.getSelectedItem();
-            String ph    = phoneField.getText().trim();
-            if (last.isEmpty() || first.isEmpty()) {
-                JOptionPane.showMessageDialog(null, "Please fill all fields!");
-                return;
+            try {
+                state = connect.createStatement();
+
+                String last  = lastNameField.getText().trim();
+                String first = firstNameField.getText().trim();
+                String spec  = (String) specialtyCombo.getSelectedItem();
+                String ph    = phoneField.getText().trim();
+
+                // NAME = last name, SURNAME = first name (matching loadDoctors)
+                String sql = "INSERT INTO doctor (NAME,SURNAME,SPECIALTY,PHONE) VALUES ('"
+                        + last + "','" + first + "','" + spec + "','" + ph + "')";
+                state.execute(sql);
+                state.execute("commit");
+                loadDoctors();
+                JOptionPane.showMessageDialog(add_doctor, "Doctor inserted!");
+                clearFields();
+            } catch (SQLException e1) {
+                e1.printStackTrace();
             }
-            tableModel.addRow(new Object[]{last, first, spec, ph});
-            clearFields();
         }
 
+        //delete doctor from the data base
         if (e.getSource() == delete_doctor) {
             int row = doctorTable.getSelectedRow();
-            if (row < 0) { JOptionPane.showMessageDialog(null, "Select a doctor first!"); return; }
-            answer = JOptionPane.showConfirmDialog(null, "Are you sure ?", "Delete doctor", JOptionPane.YES_NO_OPTION);
-            if (answer == JOptionPane.YES_OPTION) { tableModel.removeRow(row); clearFields(); }
+            if (row < 0) { JOptionPane.showMessageDialog(null, "Select a doctor!"); return; }
+            answer = JOptionPane.showConfirmDialog(null, "Are you sure?", "Delete doctor", JOptionPane.YES_NO_OPTION);
+            if (answer == JOptionPane.YES_OPTION) {
+                try {
+                    //Delete from database
+                    String lastName  = (String) tableModel.getValueAt(row, 0);
+                    String firstName = (String) tableModel.getValueAt(row, 1);
+                    String ph        = (String) tableModel.getValueAt(row, 3);
+
+                    // NAME = last name, SURNAME = first name (matching loadDoctors)
+                    String sql = "DELETE FROM doctor WHERE NAME='" + lastName
+                            + "' AND SURNAME='" + firstName
+                            + "' AND PHONE='" + ph + "'";
+                    state = connect.createStatement();
+                    state.execute(sql);
+                    state.execute("commit");
+
+                    //load doctors from the data base
+                    loadDoctors();
+                    clearFields();
+                    JOptionPane.showMessageDialog(null, "Doctor deleted!");
+                } catch (SQLException e1) {
+                    e1.printStackTrace();
+                }
+            }
         }
 
+        //edit doctor from data base
         if (e.getSource() == edit_doctor) {
             int row = doctorTable.getSelectedRow();
             if (row < 0) { JOptionPane.showMessageDialog(null, "Select a doctor first!"); return; }
-            tableModel.setValueAt(lastNameField.getText().trim(), row, 0);
-            tableModel.setValueAt(firstNameField.getText().trim(), row, 1);
-            tableModel.setValueAt(specialtyCombo.getSelectedItem(), row, 2);
-            tableModel.setValueAt(phoneField.getText().trim(), row, 3);
+
+            try {
+                state = connect.createStatement();
+                String newLast  = lastNameField.getText().trim();
+                String newFirst = firstNameField.getText().trim();
+                String newSpec  = (String) specialtyCombo.getSelectedItem();
+                String newPh    = phoneField.getText().trim();
+
+                // NAME = last name, SURNAME = first name (matching loadDoctors)
+                String sql = "UPDATE doctor SET "
+                        + "NAME='"      + newLast  + "', "
+                        + "SURNAME='"   + newFirst + "', "
+                        + "SPECIALTY='" + newSpec  + "', "
+                        + "PHONE='"     + newPh    + "' "
+                        + "WHERE NAME='"    + originalLastName  + "' "
+                        + "AND SURNAME='"   + originalFirstName + "'";
+
+                state.execute(sql);
+                state.execute("commit");
+
+                //load doctors from the data base
+                loadDoctors();
+                JOptionPane.showMessageDialog(null, "Doctor updated!");
+                clearFields();
+            } catch (SQLException e1) {
+                e1.printStackTrace();
+                JOptionPane.showMessageDialog(null, "Error updating doctor: " + e1.getMessage());
+            }
         }
     }
 

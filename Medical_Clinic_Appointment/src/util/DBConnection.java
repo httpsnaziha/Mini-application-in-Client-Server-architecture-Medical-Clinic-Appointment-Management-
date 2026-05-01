@@ -4,14 +4,13 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 
 public class DBConnection {
-    // Utilise les mêmes infos que dans ton ConnectionBD
-    private static final String URL = "jdbc:oracle:thin:@localhost:1521:xe";
-    private static final String USER = "system"; 
-    private static final String PASSWORD = "nour"; 
+
+    private static final String URL      = "jdbc:oracle:thin:@localhost:1521:XE";
+    private static final String USER     = "alaouchiche";
+    private static final String PASSWORD = "naziha";
 
     public static Connection getConnection() {
         try {
-            
             Class.forName("oracle.jdbc.OracleDriver");
             return DriverManager.getConnection(URL, USER, PASSWORD);
         } catch (Exception e) {
